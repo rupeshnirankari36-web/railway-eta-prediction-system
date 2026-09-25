@@ -1,6 +1,13 @@
 import React, { useState, useEffect } from 'react';
 
-export default function Navbar({ onOpenSimulator, systemHealth, onRefresh, isRefreshing }) {
+export default function Navbar({ 
+  currentView = 'MAP', 
+  onViewChange = () => {}, 
+  onOpenSimulator, 
+  systemHealth, 
+  onRefresh, 
+  isRefreshing 
+}) {
   const [currentTime, setCurrentTime] = useState(new Date().toLocaleTimeString());
 
   useEffect(() => {

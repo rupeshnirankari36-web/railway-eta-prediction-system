@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 
 export default function Map({ trains = [], selectedTrainId, selectedTrainEta, onSelectTrain }) {
   const mapContainerRef = useRef(null);

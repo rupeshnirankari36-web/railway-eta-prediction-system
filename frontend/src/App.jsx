@@ -7,6 +7,7 @@ import ETAPanel from './components/ETAPanel';
 import DelayBreakdown from './components/DelayBreakdown';
 import SimulatorModal from './components/SimulatorModal';
 import StationBoard from './components/StationBoard';
+import NTESComparisonView from './components/NTESComparisonView';
 import LiveApiModal from './components/LiveApiModal';
 import { railwayAPI } from './api/railwayAPI';
 
@@ -151,6 +152,13 @@ export default function App() {
 
       {currentView === 'STATION_BOARD' ? (
         <StationBoard
+          onSelectTrain={(id) => {
+            setSelectedTrainId(id);
+            setCurrentView('MAP');
+          }}
+        />
+      ) : currentView === 'NTES_COMPARISON' ? (
+        <NTESComparisonView
           onSelectTrain={(id) => {
             setSelectedTrainId(id);
             setCurrentView('MAP');

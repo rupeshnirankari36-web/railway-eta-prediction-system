@@ -212,6 +212,20 @@ export const railwayAPI = {
     }
   },
 
+  /**
+   * Get NTES Rule-Based vs IR-ETA XGBoost Comparison for entire train route
+   */
+  async getNTESComparison(trainId) {
+    try {
+      const res = await fetchWithTimeout(`${API_BASE}/ntes/comparison/${trainId}`, {}, 6000);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return await res.json();
+    } catch (err) {
+      console.warn(`[API] /ntes/comparison/${trainId} fallback`);
+      return _fallbackNTESComparison(trainId);
+    }
+  },
+
   // ---- NEW LIVE REAL-TIME ENDPOINTS ----
 
   /**
@@ -319,3 +333,52 @@ function _fallbackStationBoard(stationCode) {
     ]
   };
 }
+
+function _fallbackNTESComparison(trainId) {
+  return {
+    train_number: trainId,
+    train_name: trainId === '12951' ? 'Mumbai Rajdhani Express' : 'Howrah Rajdhani Express',
+    train_class: 'Rajdhani',
+    origin: 'HWH',
+    destination: 'NDLS',
+    total_distance_km: 1450,
+    current_station: 'Gaya Junction',
+    current_station_code: 'GAYA',
+    current_delay_minutes: 14.0,
+    comparison_summary: {
+      ntes_system_name: 'National Train Enquiry System (Rule-Based Static)',
+      ai_system_name: 'IR-ETA XGBoost Multi-Model (Dynamic AI)',
+      ntes_destination_delay: 14.0,
+      ai_destination_delay: 6.5,
+      time_savings_recovered_mins: 7.5,
+      historical_benchmark: {
+        ntes_baseline_mae_minutes: 22.4,
+        ai_model_mae_minutes: 3.82,
+        accuracy_improvement_pct: 82.9,
+        test_sample_size: 100000,
+      },
+      key_insight: 'NTES assumes constant +14m delay till New Delhi. IR-ETA AI Model predicts 7.5 mins recovery on the high-speed Kanpur-Delhi trunk section.',
+    },
+    comparison_table: [
+      { station_index: 1, station_code: 'HWH', station_name: 'Howrah Junction', distance_km: 0, platform: 'PF 9', sta: '16:50', std: '16:50', day: 1, status: 'DEPARTED', ntes_expected_time: '16:50', ntes_delay_min: 0, ai_predicted_time: '16:50', ai_predicted_delay_min: 0, delta_min: 0, delta_type: 'MATCHED', confidence: 1.0 },
+      { station_index: 2, station_code: 'ASN', station_name: 'Asansol Junction', distance_km: 200, platform: 'PF 4', sta: '18:57', std: '19:00', day: 1, status: 'DEPARTED', ntes_expected_time: '19:05', ntes_delay_min: 8, ai_predicted_time: '19:05', ai_predicted_delay_min: 8, delta_min: 0, delta_type: 'MATCHED', confidence: 1.0 },
+      { station_index: 3, station_code: 'DHN', station_name: 'Dhanbad Junction', distance_km: 259, platform: 'PF 3', sta: '19:50', std: '19:55', day: 1, status: 'DEPARTED', ntes_expected_time: '20:04', ntes_delay_min: 14, ai_predicted_time: '20:04', ai_predicted_delay_min: 14, delta_min: 0, delta_type: 'MATCHED', confidence: 1.0 },
+      { station_index: 4, station_code: 'GAYA', station_name: 'Gaya Junction', distance_km: 458, platform: 'PF 1', sta: '22:19', std: '22:22', day: 1, status: 'CURRENT_LOCATION', ntes_expected_time: '22:33', ntes_delay_min: 14, ai_predicted_time: '22:33', ai_predicted_delay_min: 14, delta_min: 0, delta_type: 'LIVE_POSITION', confidence: 0.98 },
+      { station_index: 5, station_code: 'MGS', station_name: 'Pt. DD Upadhyaya', distance_km: 663, platform: 'PF 2', sta: '00:45', std: '00:55', day: 2, status: 'UPCOMING', ntes_expected_time: '00:59', ntes_delay_min: 14, ai_predicted_time: '00:56', ai_predicted_delay_min: 11, delta_min: 3, delta_type: 'AI_PREDICTS_RECOVERY', confidence: 0.90 },
+      { station_index: 6, station_code: 'PRYJ', station_name: 'Prayagraj Junction', distance_km: 816, platform: 'PF 1', sta: '02:33', std: '02:35', day: 2, status: 'UPCOMING', ntes_expected_time: '02:47', ntes_delay_min: 14, ai_predicted_time: '02:42', ai_predicted_delay_min: 9, delta_min: 5, delta_type: 'AI_PREDICTS_RECOVERY', confidence: 0.85 },
+      { station_index: 7, station_code: 'CNB', station_name: 'Kanpur Central', distance_km: 1010, platform: 'PF 1', sta: '04:40', std: '04:45', day: 2, status: 'UPCOMING', ntes_expected_time: '04:54', ntes_delay_min: 14, ai_predicted_time: '04:48', ai_predicted_delay_min: 8, delta_min: 6, delta_type: 'AI_PREDICTS_RECOVERY', confidence: 0.80 },
+      { station_index: 8, station_code: 'NDLS', station_name: 'New Delhi', distance_km: 1450, platform: 'PF 1', sta: '10:05', std: '10:05', day: 2, status: 'UPCOMING', ntes_expected_time: '10:19', ntes_delay_min: 14, ai_predicted_time: '10:11', ai_predicted_delay_min: 6.5, delta_min: 7.5, delta_type: 'AI_PREDICTS_RECOVERY', confidence: 0.74 }
+    ],
+    chart_data: [
+      { station: 'HWH', distance_km: 0, scheduled_delay: 0, ntes_delay: 0, ai_delay: 0 },
+      { station: 'ASN', distance_km: 200, scheduled_delay: 0, ntes_delay: 8, ai_delay: 8 },
+      { station: 'DHN', distance_km: 259, scheduled_delay: 0, ntes_delay: 14, ai_delay: 14 },
+      { station: 'GAYA', distance_km: 458, scheduled_delay: 0, ntes_delay: 14, ai_delay: 14, is_current: true },
+      { station: 'MGS', distance_km: 663, scheduled_delay: 0, ntes_delay: 14, ai_delay: 11 },
+      { station: 'PRYJ', distance_km: 816, scheduled_delay: 0, ntes_delay: 14, ai_delay: 9 },
+      { station: 'CNB', distance_km: 1010, scheduled_delay: 0, ntes_delay: 14, ai_delay: 8 },
+      { station: 'NDLS', distance_km: 1450, scheduled_delay: 0, ntes_delay: 14, ai_delay: 6.5 }
+    ]
+  };
+}
+

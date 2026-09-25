@@ -25,6 +25,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from backend.inference import InferenceEngine
 from backend.realtime_feed import live_data_manager, is_live_api_configured
+from backend.ntes_comparator import compute_ntes_vs_ai_comparison
 
 
 # ==================== APP SETUP ====================
@@ -524,6 +525,40 @@ async def simulate_event(
         "affected_stations": affected,
         "timestamp": datetime.now().isoformat(),
     }
+
+
+# ==================== NTES VS AI MODEL COMPARISON ====================
+
+@app.get("/ntes/comparison/{train_id}")
+async def get_ntes_comparison(train_id: str):
+    """
+    NTES vs IR-ETA AI Model Benchmark & Timetable Comparison Endpoint.
+    Compares Indian Railways' official rule-based static ETA with 
+    our dynamic Multi-Model XGBoost AI predictions across all route stations.
+    """
+    train_id = train_id.strip()
+    
+    # Try fetching real-time delay from live feed first
+    live_status = await live_data_manager.get_live_status(train_id)
+    
+    if live_status and live_status.get("delay_minutes") is not None:
+        current_delay = live_status["delay_minutes"]
+        station_idx = 3  # default mid-route for live simulation
+    else:
+        info = TRAINS_DB.get(train_id, {})
+        sim = _simulate_train_position(train_id, info) if info else {'current_delay': 12.0, 'station_index': 3}
+        current_delay = sim.get('current_delay', 12.0)
+        station_idx = sim.get('station_index', 3)
+
+    comparison_data = compute_ntes_vs_ai_comparison(
+        train_id=train_id,
+        current_delay_minutes=current_delay,
+        current_station_idx=station_idx,
+        inference_engine=inference_engine,
+        live_meta=live_status
+    )
+    
+    return comparison_data
 
 
 # ==================== STATION FIDS BOARD ====================

@@ -41,7 +41,13 @@ export default function Navbar({
           className={`view-switch-btn ${currentView === 'STATION_BOARD' ? 'active' : ''}`}
           onClick={() => onViewChange('STATION_BOARD')}
         >
-          🚉 Station Display Board (FIDS)
+          🚉 Station Display (FIDS)
+        </button>
+        <button
+          className={`view-switch-btn ${currentView === 'NTES_COMPARISON' ? 'active' : ''}`}
+          onClick={() => onViewChange('NTES_COMPARISON')}
+        >
+          📊 NTES vs AI Benchmark
         </button>
       </div>
 

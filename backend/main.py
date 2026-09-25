@@ -525,6 +525,148 @@ async def simulate_event(
     }
 
 
+# ==================== STATION FIDS BOARD ====================
+
+@app.get("/stations")
+async def get_all_stations():
+    """Get list of all supported major railway stations"""
+    stations = []
+    for code, info in STATION_COORDS.items():
+        stations.append({
+            "code": code,
+            "name": info["name"],
+            "latitude": info["lat"],
+            "longitude": info["lon"],
+            "platforms": 10 if code in ['NDLS', 'HWH', 'BOM', 'MAS'] else 6,
+        })
+    return {"stations": stations}
+
+
+@app.get("/stations/{station_code}/board")
+async def get_station_board(station_code: str):
+    """
+    Flight/Train Information Display System (FIDS) Board
+    Shows live arrivals, departures, assigned platforms, and AI predicted ETA for a station.
+    """
+    station_code = station_code.upper()
+    if station_code not in STATION_COORDS:
+        raise HTTPException(status_code=404, detail=f"Station {station_code} not found")
+
+    station_info = STATION_COORDS[station_code]
+    now = datetime.now()
+    board_entries = []
+
+    for train_id, info in TRAINS_DB.items():
+        route = info['route']
+        stations = ROUTE_STATIONS.get(route, [])
+        if station_code not in stations:
+            continue
+
+        target_idx = stations.index(station_code)
+        pos = _simulate_train_position(train_id, info)
+        current_idx = pos['station_index']
+
+        # Determine if train is arriving or departing
+        is_origin = (target_idx == 0)
+        is_destination = (target_idx == len(stations) - 1)
+        movement_type = "Departure" if is_origin else "Arrival" if is_destination else "Transit"
+
+        # Deterministic platform allocation (PF 1 to 8)
+        platform_num = (int(train_id) % 8) + 1
+
+        # Scheduled time calculation relative to journey progress
+        hours_offset = (target_idx - current_idx) * 1.5
+        scheduled_dt = now + timedelta(hours=hours_offset)
+        delay_min = pos['current_delay']
+
+        # AI Prediction calculation
+        if inference_engine and inference_engine.is_loaded():
+            features = {
+                'current_delay_minutes': delay_min,
+                'current_speed_kmh': pos['current_speed'],
+                'distance_remaining_km': max(0, pos['distance_remaining']),
+                'distance_to_next_station_km': 50.0,
+                'upstream_delay_minutes': delay_min * 0.7,
+                'speed_trend': 0,
+                'temperature_celsius': 30.0,
+                'rainfall_mm': 0.0,
+                'time_of_day_hour': scheduled_dt.hour,
+                'day_of_week': now.weekday(),
+                'train_class_encoded': {'Rajdhani': 1, 'Express': 2, 'Passenger': 3}[info['class']],
+                'track_type': 1,
+                'level_crossings_ahead': 2,
+                'is_morning_rush': 1 if 6 <= scheduled_dt.hour <= 9 else 0,
+                'is_evening_rush': 1 if 17 <= scheduled_dt.hour <= 19 else 0,
+                'is_peak_hour': 1 if (6 <= scheduled_dt.hour <= 9 or 17 <= scheduled_dt.hour <= 19) else 0,
+                'is_night': 1 if (scheduled_dt.hour >= 22 or scheduled_dt.hour <= 4) else 0,
+                'upstream_weather_interaction': 0.0,
+                'delay_trend': 0,
+                'delay_vs_class_avg': 0,
+                'heat_stress': 0,
+                'cold_fog_factor': 0,
+                'weather_delay_factor': 0,
+                'cumulative_distance_pct': 50.0,
+                'trains_ahead_indicator': 1,
+                'seasonal_factor': 1.0,
+                'is_weekend': 1 if now.weekday() >= 5 else 0,
+                'station_progress': target_idx,
+            }
+            predicted_delay = max(0, inference_engine.predict(features, info['class']))
+        else:
+            predicted_delay = delay_min
+
+        predicted_dt = scheduled_dt + timedelta(minutes=predicted_delay)
+
+        # Status text & category
+        diff_from_now = (predicted_dt - now).total_seconds() / 60.0
+        if current_idx == target_idx:
+            status = f"At Platform {platform_num}"
+            status_code = "AT_PLATFORM"
+        elif diff_from_now < 0:
+            status = "Departed"
+            status_code = "DEPARTED"
+        elif diff_from_now <= 15:
+            status = f"Arriving Soon (PF {platform_num})"
+            status_code = "ARRIVING"
+        elif predicted_delay <= 5:
+            status = "On Time"
+            status_code = "ON_TIME"
+        else:
+            status = f"Delayed (+{round(predicted_delay)}m)"
+            status_code = "DELAYED"
+
+        origin_name = STATION_COORDS.get(stations[0], {}).get('name', stations[0])
+        dest_name = STATION_COORDS.get(stations[-1], {}).get('name', stations[-1])
+
+        board_entries.append({
+            "train_id": train_id,
+            "train_name": info['name'],
+            "train_class": info['class'],
+            "origin": origin_name,
+            "destination": dest_name,
+            "platform": f"PF {platform_num}",
+            "movement_type": movement_type,
+            "scheduled_time": scheduled_dt.strftime("%H:%M"),
+            "predicted_time": predicted_dt.strftime("%H:%M"),
+            "delay_minutes": round(predicted_delay, 1),
+            "status": status,
+            "status_code": status_code,
+            "current_location": pos['station_name'],
+            "confidence_score": 0.91 if info['class'] == 'Rajdhani' else 0.86,
+        })
+
+    # Sort board by predicted time
+    board_entries.sort(key=lambda x: x['predicted_time'])
+
+    return {
+        "station_code": station_code,
+        "station_name": station_info['name'],
+        "total_trains": len(board_entries),
+        "timestamp": now.isoformat(),
+        "board": board_entries,
+    }
+
+
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""

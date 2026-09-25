@@ -20,6 +20,21 @@ export default function Navbar({ onOpenSimulator, systemHealth, onRefresh, isRef
         </div>
       </div>
 
+      <div className="nav-view-switcher">
+        <button
+          className={`view-switch-btn ${currentView === 'MAP' ? 'active' : ''}`}
+          onClick={() => onViewChange('MAP')}
+        >
+          🗺️ Fleet Map & ETA
+        </button>
+        <button
+          className={`view-switch-btn ${currentView === 'STATION_BOARD' ? 'active' : ''}`}
+          onClick={() => onViewChange('STATION_BOARD')}
+        >
+          🚉 Station Display Board (FIDS)
+        </button>
+      </div>
+
       <div className="nav-actions">
         <div className="live-badge">
           <div className="pulse-dot"></div>

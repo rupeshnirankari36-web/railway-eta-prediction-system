@@ -91,4 +91,33 @@ export const railwayAPI = {
       return { status: 'unreachable' };
     }
   },
+
+  /**
+   * Get all stations
+   */
+  async getStations() {
+    try {
+      const res = await fetch(`${API_BASE}/stations`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      return data.stations || [];
+    } catch (err) {
+      console.error('Error fetching stations:', err);
+      return [];
+    }
+  },
+
+  /**
+   * Get station FIDS display board
+   */
+  async getStationBoard(stationCode) {
+    try {
+      const res = await fetch(`${API_BASE}/stations/${stationCode}/board`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return await res.json();
+    } catch (err) {
+      console.error(`Error fetching station board for ${stationCode}:`, err);
+      return null;
+    }
+  },
 };

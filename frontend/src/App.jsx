@@ -6,9 +6,11 @@ import Map from './components/Map';
 import ETAPanel from './components/ETAPanel';
 import DelayBreakdown from './components/DelayBreakdown';
 import SimulatorModal from './components/SimulatorModal';
+import StationBoard from './components/StationBoard';
 import { railwayAPI } from './api/railwayAPI';
 
 export default function App() {
+  const [currentView, setCurrentView] = useState('MAP');
   const [trains, setTrains] = useState([]);
   const [selectedTrainId, setSelectedTrainId] = useState(null);
   const [trainStatus, setTrainStatus] = useState(null);
@@ -91,6 +93,8 @@ export default function App() {
   return (
     <div className="app-container">
       <Navbar 
+        currentView={currentView}
+        onViewChange={setCurrentView}
         onOpenSimulator={() => setIsSimulatorOpen(true)}
         systemHealth={systemHealth}
         onRefresh={refreshTrains}
@@ -99,33 +103,42 @@ export default function App() {
 
       <StatsBanner trains={trains} />
 
-      <main className="dashboard-content">
-        {/* Left: Train Selector & Filters */}
-        <TrainList
-          trains={trains}
-          selectedTrainId={selectedTrainId}
-          onSelectTrain={handleSelectTrain}
+      {currentView === 'STATION_BOARD' ? (
+        <StationBoard
+          onSelectTrain={(id) => {
+            setSelectedTrainId(id);
+            setCurrentView('MAP');
+          }}
         />
-
-        {/* Center: Live Map */}
-        <Map
-          trains={trains}
-          selectedTrainId={selectedTrainId}
-          selectedTrainEta={etaData}
-          onSelectTrain={handleSelectTrain}
-        />
-
-        {/* Right: Real-time ETA Projections & Explainability */}
-        <aside className="details-panel">
-          <ETAPanel
-            trainStatus={trainStatus}
-            etaData={etaData}
-            loading={loadingEta}
+      ) : (
+        <main className="dashboard-content">
+          {/* Left: Train Selector & Filters */}
+          <TrainList
+            trains={trains}
+            selectedTrainId={selectedTrainId}
+            onSelectTrain={handleSelectTrain}
           />
 
-          <DelayBreakdown explanationData={explanationData} />
-        </aside>
-      </main>
+          {/* Center: Live Map */}
+          <Map
+            trains={trains}
+            selectedTrainId={selectedTrainId}
+            selectedTrainEta={etaData}
+            onSelectTrain={handleSelectTrain}
+          />
+
+          {/* Right: Real-time ETA Projections & Explainability */}
+          <aside className="details-panel">
+            <ETAPanel
+              trainStatus={trainStatus}
+              etaData={etaData}
+              loading={loadingEta}
+            />
+
+            <DelayBreakdown explanationData={explanationData} />
+          </aside>
+        </main>
+      )}
 
       <SimulatorModal
         isOpen={isSimulatorOpen}

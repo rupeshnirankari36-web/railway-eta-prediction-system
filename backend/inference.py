@@ -31,7 +31,7 @@ class InferenceEngine:
             # Load metadata
             metadata_path = os.path.join(path, 'metadata.json')
             if not os.path.exists(metadata_path):
-                print(f"  ⚠ No metadata.json found in {path}")
+                print(f"  [WARN] No metadata.json found in {path}")
                 return
 
             with open(metadata_path, 'r') as f:
@@ -47,14 +47,14 @@ class InferenceEngine:
                     model = xgb.XGBRegressor()
                     model.load_model(model_path)
                     self.models[class_name] = model
-                    print(f"  ✓ Loaded {class_name} model")
+                    print(f"  [OK] Loaded {class_name} model")
 
             # Load scalers
             scalers_path = os.path.join(path, 'scalers.pkl')
             if os.path.exists(scalers_path):
                 with open(scalers_path, 'rb') as f:
                     self.scalers = pickle.load(f)
-                print(f"  ✓ Loaded scalers")
+                print(f"  [OK] Loaded scalers")
             elif 'scaler_params' in metadata:
                 for class_name, params in metadata['scaler_params'].items():
                     scaler = StandardScaler()
@@ -66,10 +66,10 @@ class InferenceEngine:
 
             self._loaded = len(self.models) > 0
             if self._loaded:
-                print(f"  ✓ Inference engine ready ({len(self.models)} models)")
+                print(f"  [OK] Inference engine ready ({len(self.models)} models)")
 
         except Exception as e:
-            print(f"  ⚠ Error loading models: {e}")
+            print(f"  [WARN] Error loading models: {e}")
             self._loaded = False
 
     def is_loaded(self):

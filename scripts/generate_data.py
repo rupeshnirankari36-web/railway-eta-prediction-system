@@ -12,6 +12,13 @@ import pandas as pd
 from datetime import datetime, timedelta
 import random
 import os
+import sys
+
+if sys.stdout.encoding != 'utf-8':
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+    except Exception:
+        pass
 
 
 class RealisticRailwayDataGenerator:

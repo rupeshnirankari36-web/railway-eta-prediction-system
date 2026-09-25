@@ -16,6 +16,13 @@ import pandas as pd
 import numpy as np
 from sklearn.preprocessing import StandardScaler
 import os
+import sys
+
+if sys.stdout.encoding != 'utf-8':
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+    except Exception:
+        pass
 
 
 class FeatureEngineering:

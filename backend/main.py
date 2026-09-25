@@ -40,9 +40,9 @@ async def lifespan(app: FastAPI):
     print(f"Loading models from {models_path}...")
     try:
         inference_engine = InferenceEngine(models_path)
-        print("✓ Models loaded successfully!")
+        print("[OK] Models loaded successfully!")
     except Exception as e:
-        print(f"⚠ Models not found ({e}). Running in demo mode with simulated predictions.")
+        print(f"[WARN] Models not found ({e}). Running in demo mode with simulated predictions.")
         inference_engine = None
     yield
 

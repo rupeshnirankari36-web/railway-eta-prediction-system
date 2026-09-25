@@ -1,8 +1,15 @@
 import React, { useState, useMemo } from 'react';
 
-export default function TrainList({ trains = [], selectedTrainId, onSelectTrain }) {
+export default function TrainList({ 
+  trains = [], 
+  selectedTrainId, 
+  onSelectTrain,
+  onAddLiveTrain = () => {}
+}) {
   const [search, setSearch] = useState('');
   const [filterClass, setFilterClass] = useState('ALL');
+  const [searchingLive, setSearchingLive] = useState(false);
+  const [searchMsg, setSearchMsg] = useState(null);
 
   const filteredTrains = useMemo(() => {
     return trains.filter(t => {
@@ -23,6 +30,19 @@ export default function TrainList({ trains = [], selectedTrainId, onSelectTrain 
     return 'major';
   };
 
+  const handleLiveLookup = async () => {
+    if (!search.trim()) return;
+    setSearchingLive(true);
+    setSearchMsg(null);
+    try {
+      await onAddLiveTrain(search.trim());
+    } catch (e) {
+      setSearchMsg('Could not find live train');
+    } finally {
+      setSearchingLive(false);
+    }
+  };
+
   return (
     <aside className="train-sidebar">
       <div className="search-filter-box">
@@ -31,9 +51,13 @@ export default function TrainList({ trains = [], selectedTrainId, onSelectTrain 
           <input
             type="text"
             className="search-input"
-            placeholder="Search train no, name, route..."
+            placeholder="Search train no (e.g. 12301)..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setSearchMsg(null);
+            }}
+            onKeyDown={(e) => e.key === 'Enter' && handleLiveLookup()}
           />
         </div>
 
@@ -54,7 +78,17 @@ export default function TrainList({ trains = [], selectedTrainId, onSelectTrain 
         {filteredTrains.length === 0 ? (
           <div className="empty-state">
             <span className="empty-state-icon">🚆</span>
-            <p>No trains match criteria</p>
+            <p>No local trains match "{search}"</p>
+            {search.trim().length >= 3 && (
+              <button 
+                className="btn-live-search" 
+                onClick={handleLiveLookup}
+                disabled={searchingLive}
+              >
+                {searchingLive ? '🛰️ Querying IRCTC...' : `🛰️ Search Live IRCTC for "${search}"`}
+              </button>
+            )}
+            {searchMsg && <p style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: 6 }}>{searchMsg}</p>}
           </div>
         ) : (
           filteredTrains.map((t) => {
@@ -70,9 +104,14 @@ export default function TrainList({ trains = [], selectedTrainId, onSelectTrain 
               >
                 <div className="train-header">
                   <span className="train-number">#{t.train_id}</span>
-                  <span className={`class-tag ${t.train_class?.toLowerCase()}`}>
-                    {t.train_class}
-                  </span>
+                  <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                    {t.is_live_data && (
+                      <span className="live-pill" title="Live IRCTC Data">LIVE</span>
+                    )}
+                    <span className={`class-tag ${t.train_class?.toLowerCase()}`}>
+                      {t.train_class}
+                    </span>
+                  </div>
                 </div>
 
                 <div className="train-title">{t.train_name}</div>
@@ -91,3 +130,4 @@ export default function TrainList({ trains = [], selectedTrainId, onSelectTrain 
     </aside>
   );
 }
+

@@ -4,11 +4,14 @@ export default function Navbar({
   currentView = 'MAP', 
   onViewChange = () => {}, 
   onOpenSimulator, 
+  onOpenLiveApi,
   systemHealth, 
+  liveStatus,
   onRefresh, 
   isRefreshing 
 }) {
   const [currentTime, setCurrentTime] = useState(new Date().toLocaleTimeString());
+  const isLive = liveStatus?.rapidapi_configured;
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -43,10 +46,15 @@ export default function Navbar({
       </div>
 
       <div className="nav-actions">
-        <div className="live-badge">
-          <div className="pulse-dot"></div>
-          <span>{systemHealth?.status === 'healthy' ? 'AI Engine Active' : 'Demo Mode'}</span>
-        </div>
+        {/* Live Data / API Status Badge */}
+        <button 
+          className={`live-api-badge ${isLive ? 'live-active' : 'live-simulated'}`}
+          onClick={onOpenLiveApi}
+          title="Click to view Live API Connection Settings"
+        >
+          <div className="pulse-dot" style={{ background: isLive ? '#10b981' : '#f59e0b' }}></div>
+          <span>{isLive ? '🛰️ IRCTC Live' : '🤖 ML Neural'}</span>
+        </button>
 
         <div className="time-badge">
           <span>{currentTime}</span>
@@ -68,3 +76,4 @@ export default function Navbar({
     </nav>
   );
 }
+

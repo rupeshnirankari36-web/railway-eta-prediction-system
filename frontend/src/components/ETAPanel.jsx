@@ -24,13 +24,25 @@ export default function ETAPanel({ trainStatus, etaData, loading }) {
   }
 
   const predictions = etaData?.predictions || [];
+  const isLiveData = trainStatus.is_live_data || etaData?.is_live_data || (trainStatus.data_source && trainStatus.data_source !== 'offline_fallback' && trainStatus.data_source !== 'ml_simulation');
 
   return (
     <div className="panel-section">
       <div className="train-hero">
         <div className="train-hero-top">
           <div>
-            <span className="hero-number">TRAIN #{trainStatus.train_id}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span className="hero-number">TRAIN #{trainStatus.train_id}</span>
+              {isLiveData ? (
+                <span className="live-pill" style={{ background: 'rgba(16, 185, 129, 0.2)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.4)' }}>
+                  🛰️ LIVE IRCTC
+                </span>
+              ) : (
+                <span className="live-pill" style={{ background: 'rgba(245, 158, 11, 0.2)', color: '#f59e0b', border: '1px solid rgba(245, 158, 11, 0.4)' }}>
+                  🤖 ML MODEL
+                </span>
+              )}
+            </div>
             <h2 className="hero-name">{trainStatus.train_name}</h2>
           </div>
           <span className={`class-tag ${trainStatus.train_class?.toLowerCase()}`}>

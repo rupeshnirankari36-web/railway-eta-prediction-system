@@ -106,23 +106,60 @@ class IRCTCRapidAPIProvider:
     def _normalize_irctc_response(self, train_number: str, raw: Dict) -> Optional[Dict]:
         """
         Normalize different API response formats into a consistent dict.
-        Handles both irctc1 and india-rail response schemas.
+        Handles both irctc1 and india-rail response schemas with robust fallback.
         """
         try:
             # irctc1.p.rapidapi.com format
             if "data" in raw and isinstance(raw["data"], dict):
                 data = raw["data"]
-                station = data.get("current_station", {}) or {}
+
+                # Extract station name & code
+                stn_name = (
+                    data.get("current_station_name")
+                    or data.get("current_station", {}).get("stationName")
+                    or "En Route"
+                )
+                stn_code = (
+                    data.get("current_station_code")
+                    or data.get("current_station", {}).get("stationCode")
+                    or "UNKN"
+                )
+
+                # Clean up station name artifacts like trailing ~ or .
+                if stn_name:
+                    stn_name = stn_name.replace("~", "").rstrip(".").strip()
+
+                # Extract delay (in minutes)
+                raw_delay = data.get("delay")
+                delay_minutes = 0.0
+                if raw_delay is not None:
+                    try:
+                        delay_minutes = float(raw_delay)
+                    except (ValueError, TypeError):
+                        delay_minutes = 0.0
+
+                # Extract speed
+                raw_speed = data.get("avg_speed") or data.get("speed") or 0.0
+                try:
+                    speed_kmh = float(raw_speed)
+                except (ValueError, TypeError):
+                    speed_kmh = 0.0
+
+                # Extract upcoming stations if present
+                upcoming = data.get("upcoming_stations", [])
+
                 return {
                     "train_number": train_number,
                     "train_name": data.get("train_name", f"Train {train_number}"),
-                    "current_station_code": station.get("stationCode", "UNKN"),
-                    "current_station_name": station.get("stationName", "En Route"),
-                    "delay_minutes": float(data.get("delay", 0) or 0),
-                    "speed_kmh": float(data.get("speed", 0) or 0),
-                    "latitude": float(station.get("lat", 0) or 0),
-                    "longitude": float(station.get("lng", 0) or 0),
-                    "source": "rapidapi_live",
+                    "current_station_code": stn_code,
+                    "current_station_name": stn_name,
+                    "delay_minutes": max(0.0, delay_minutes),
+                    "speed_kmh": speed_kmh,
+                    "latitude": float(data.get("cur_stn_lat") or 0.0),
+                    "longitude": float(data.get("cur_stn_lng") or 0.0),
+                    "status_message": data.get("new_message") or data.get("status") or "Running Live",
+                    "upcoming_stations": upcoming,
+                    "source": "rapidapi_irctc1_live",
                     "fetched_at": datetime.now().isoformat(),
                 }
 
@@ -135,9 +172,10 @@ class IRCTCRapidAPIProvider:
                     "current_station_code": rs.get("StationCode", "UNKN"),
                     "current_station_name": rs.get("StationName", "En Route"),
                     "delay_minutes": float(rs.get("LateMin", 0) or 0),
-                    "speed_kmh": 0.0,  # not provided by this API
+                    "speed_kmh": 0.0,
                     "latitude": 0.0,
                     "longitude": 0.0,
+                    "status_message": "Running Live",
                     "source": "rapidapi_india_rail",
                     "fetched_at": datetime.now().isoformat(),
                 }
